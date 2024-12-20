@@ -19,7 +19,7 @@ def main(argv):
     index = ''
     model_id = ''
     num_of_runs = 2
-    operation = "evaluate"
+    operation = "both"
     pipelines = 'norm-pipeline'
     mmethod = 'hybrid'
     for opt, arg in opts:
@@ -57,6 +57,7 @@ def main(argv):
     # dataset = "arguana"
     # dataset = 'fiqa'
     url = url.format(dataset)
+    #url = "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/{}.zip".format(dataset)
     out_dir = os.path.join(pathlib.Path(__file__).parent.absolute(), "datasets")
     data_path = util.download_and_unzip(url, out_dir)
 
@@ -72,7 +73,6 @@ def main(argv):
 
 def ingest_data(corpus, endpoint, index, port):
     OpenSearchDataIngestor(endpoint, port).ingest(corpus, index=index)
-
 
 def evaluate(corpus, endpoint, index, model_id, port, qrels, queries, num_of_runs, pipelines, mmethod):
     # This k values are being used for BM25 search
@@ -104,7 +104,6 @@ def evaluate(corpus, endpoint, index, model_id, port, qrels, queries, num_of_run
 
     # for method in ['neural', 'hybrid']:
     for method in get_vector_methods(mm):
-        # for method in ['hybrid', 'bool']:
         for pipeline in pipelines.split(','):
             print('starting search method ' + method + " for pipeline " + pipeline)
             os_retrival = RetrievalOpenSearch(endpoint, port,
