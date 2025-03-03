@@ -9,14 +9,17 @@ import pathlib, os, getopt, sys
 
 
 def main(argv):
-    opts, args = getopt.getopt(argv, "d:u:h:p:i:m:",
-                               ["dataset=", "dataset_url=", "os_host=", "os_port=", "os_index=", "os_model_id="])
+    opts, args = getopt.getopt(argv, "d:u:h:p:i:m:o:s:",
+                               ["dataset=", "dataset_url=", "os_host=", "os_port=", "os_index=", "os_model_id=",
+                                "operation=", "subset="])
     dataset = ''
     url = ''
     endpoint = ''
     port = ''
     index = ''
     model_id = ''
+    operation = 'both'  # default value
+    subset = None
     for opt, arg in opts:
         if opt in ("-d", "-dataset"):
             dataset = arg
@@ -30,6 +33,10 @@ def main(argv):
             index = arg
         elif opt in ("-m", "-os_model_id"):
             model_id = arg
+        elif opt in ("-o", "-operation"):
+            operation = arg
+        elif opt in ("-s", "-subset"):
+            subset = arg
 
     #### Just some code to print debug information to stdout
     logging.basicConfig(format='%(asctime)s - %(message)s',
@@ -43,16 +50,23 @@ def main(argv):
     # dataset = "trec-covid"
     # dataset = "arguana"
     # dataset = 'fiqa'
-    url = url.format(dataset)
+    # url = url.format(dataset)
+    url = "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/{}.zip".format(dataset)
     out_dir = os.path.join(pathlib.Path(__file__).parent.absolute(), "datasets")
     data_path = util.download_and_unzip(url, out_dir)
 
-    #### Provide the data_path where scifact has been downloaded and unzipped
-    corpus, queries, qrels = GenericDataLoader(data_folder=data_path).load(split="test")
+    data_folder = data_path
+    if subset:
+        data_folder = data_path + '/' + subset
 
-    #ingest_data(corpus, endpoint, index, port)
+    #### Provide the data_path where dataset has been downloaded and unzipped
+    corpus, queries, qrels = GenericDataLoader(data_folder=data_folder).load(split="test")
 
-    evaluate(corpus, endpoint, index, model_id, port, qrels, queries)
+    if operation in ['ingest', 'both']:
+        ingest_data(corpus, endpoint, index, port)
+
+    if operation in ['search', 'both']:
+        evaluate(corpus, endpoint, index, model_id, port, qrels, queries)
 
 
 def ingest_data(corpus, endpoint, index, port):
@@ -62,29 +76,29 @@ def ingest_data(corpus, endpoint, index, port):
 def evaluate(corpus, endpoint, index, model_id, port, qrels, queries):
     # This k values are being used for BM25 search
     # bm25_k_values = [1, 3, 5, 10, 100, min(9999, len(corpus))]
-    bm25_k_values = [1, 3, 5, 10, 250]
+    bm25_k_values = [1, 3, 5, 10, 200]
     # This K values are being used for dense model search
-    model_k_values = [1, 3, 5, 10, 250]
+    model_k_values = [1, 3, 5, 10, 200]
     # this k values are being used for scoring
     k_values = [5, 10, 100]
     # for method in ['bm25', 'neural', 'hybrid']:
     # for method in ['hybrid']:
     # for method in ['neural']:
 
-    # for method in ['bm25']:
-    #     print('starting search method ' + method)
-    #     os_retrival = RetrievalOpenSearch(endpoint, port,
-    #                                       index_name=index,
-    #                                       model_id=model_id,
-    #                                       search_method=method,
-    #                                       pipeline_name='norm-pipeline')
-    #     retriever = EvaluateRetrieval(os_retrival, bm25_k_values)
-    #     result_size = max(bm25_k_values)
-    #     results = os_retrival.search_bm25(corpus, queries, top_k=result_size)
-    #     ndcg, _map, recall, precision = retriever.evaluate(qrels, results, k_values)
-    #     print('--- end of results for ' + method)
+    '''for method in ['bm25']:
+        print('starting search method ' + method)
+        os_retrival = RetrievalOpenSearch(endpoint, port,
+                                          index_name=index,
+                                          model_id=model_id,
+                                          search_method=method,
+                                          pipeline_name='norm-pipeline')
+        retriever = EvaluateRetrieval(os_retrival, bm25_k_values)
+        result_size = max(bm25_k_values)
+        results = os_retrival.search_bm25(corpus, queries, top_k=result_size)
+        ndcg, _map, recall, precision = retriever.evaluate(qrels, results, k_values)
+        print('--- end of results for ' + method)'''
 
-    #for method in ['neural', 'hybrid']:
+    # for method in ['neural', 'hybrid']:
     for method in ['hybrid']:
         print('starting search method ' + method)
         os_retrival = RetrievalOpenSearch(endpoint, port,
@@ -97,6 +111,40 @@ def evaluate(corpus, endpoint, index, model_id, port, qrels, queries):
         result_size = max(bm25_k_values)
         # results = retriever.retrieve(corpus, queries)
         results = os_retrival.search_vector(corpus, queries, top_k=top_k, result_size=result_size)
+
+        # Get the raw search results
+        # raw_results = os_retrival.search_vector(corpus, queries, top_k=top_k, result_size=result_size)
+
+        # Convert tuple results to the expected dictionary format
+        '''formatted_results = {}
+        # Process each query individually
+        for query_id, query_text in queries.items():
+            raw_results = os_retrival.search_vector(corpus, {query_id: query_text}, top_k=top_k, result_size=result_size)
+
+            # Initialize the query results
+            formatted_results[query_id] = {}
+
+            # Ensure we have results for this query
+            if raw_results and len(raw_results) >= 2:
+                doc_ids = raw_results[0]
+                scores = raw_results[1]
+                print(str(doc_ids) + str(scores))
+
+                # Create dictionary of doc_id -> score for this query
+                for doc_id, score in zip(doc_ids, scores):
+                    if isinstance(doc_id, str) and isinstance(score, (int, float)):
+                        formatted_results[query_id][doc_id] = float(score)
+
+            else:
+                print("Query return no results")
+
+        print(f"Results quantity:" + str(len(formatted_results)))
+        print(f"Results format: {type(formatted_results)}")
+        print(f"Sample result structure: {list(formatted_results.items())[:1]}")
+
+        ndcg, _map, recall, precision = retriever.evaluate(qrels, formatted_results, k_values)
+        '''
+
         ndcg, _map, recall, precision = retriever.evaluate(qrels, results, k_values)
         print('--- end of results for ' + method)
 

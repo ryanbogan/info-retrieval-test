@@ -18,10 +18,9 @@ logging.basicConfig(format='%(asctime)s - %(message)s',
 #### /print debug information to stdout
 #### Download scifact.zip dataset and unzip the dataset
 #dataset = "nfcorpus"
-dataset = "trec-covid"
+#dataset = "trec-covid"
 #dataset = "arguana"
 #dataset = 'fiqa'
-# url = "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/{}.zip".format(dataset)
 url = "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/{}.zip".format(dataset)
 out_dir = os.path.join(pathlib.Path(__file__).parent.absolute(), "datasets")
 data_path = util.download_and_unzip(url, out_dir)
@@ -32,23 +31,23 @@ corpus, queries, qrels = GenericDataLoader(data_folder=data_path).load(split="te
 #### Load the SBERT model and retrieve using cosine-similarity
 #model = DRES(models.SentenceBERT("msmarco-distilbert-base-tas-b"), batch_size=16)
 
-endpoint = 'hybs-4-OpenSearchLB-1320635078.us-east-1.elb.amazonaws.com' # - trec-covid
+#endpoint = 'hybs-4-OpenSearchLB-1320635078.us-east-1.elb.amazonaws.com' # - trec-covid
 #endpoint = 'hybs-5-OpenSearchLB-1396788650.us-east-1.elb.amazonaws.com' #- arguana
 #endpoint = 'hybs-6-OpenSearchLB-1452211509.us-east-1.elb.amazonaws.com' #- fiqa
 #endpoint = 'hybs-7-OpenSearchLB-1577729212.us-east-1.elb.amazonaws.com' # -nfcorpus
 #endpoint = 'hybs-8-OpenSearchLB-2143095750.us-east-1.elb.amazonaws.com'
-port = '80'
-#endpoint = 'localhost'
-#port = '9200'
+#port = '80'
+endpoint = 'localhost'
+port = '9200'
 index = "my-nlp-index-1"
 #model_id = "Zx_A3IkBQ0LOZMZR1b8m"
-model_id = "pCOW4okBxZxBf4MfceXj" #4
+model_id = "nwtTcZQBPR384kTpc2p0" #4
 #model_id = "lbMf4okBL2YOs_JqafSc" #5
 #model_id = "G-Qb3okB4hWhUso-3Qik" #6
 #model_id = "p9MA4okBVFksWKKh6fnq"
 #model_id = "5YGL4YkBk0hBbFgEeEvl" # local
 
-#OpenSearchDataIngestor(endpoint, port).ingest(corpus, index="my-nlp-index-1")
+OpenSearchDataIngestor(endpoint, port).ingest(corpus, index="my-nlp-index-1")
 
 # for method in ['bm25', 'neural', 'hybrid']:
 for method in ['hybrid']:
