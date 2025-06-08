@@ -269,8 +269,11 @@ class RetrievalOpenSearch:
                                 }
                             }
                         ]
-                    }
-                }
+}
+                    },
+		    "collapse": {
+		        "field": "title_key"
+		    }
             }
 
         def get_body_bool(query_text):
