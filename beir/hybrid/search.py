@@ -255,17 +255,11 @@ class RetrievalOpenSearch:
                                 }
                             },
                             {
-                                'match': {
-                                    'title_key': {
-                                        'query': query_text
-                                    }
-                                }
-                            },
-                            {
-                                'match': {
-                                    'text_key': {
-                                        'query': query_text
-                                    }
+                                'multi_match': {
+                                    'query': query_text,
+                                    'type': 'best_fields',
+                                    'fields': ['text_key', 'title_key'],
+                                    "tie_breaker": 0.5
                                 }
                             }
                         ]
@@ -370,7 +364,7 @@ class RetrievalOpenSearch:
             query_response = self.opensearch.search(index=index_name,
                                                     body=get_body_vector(get_doc_text(q)),
                                                     params=search_params)
-
+            logger.info(query_response)
             query_responses.append(query_response)
             if i % 50 == 0:
                 print("Executed queries: " + str(i))
@@ -387,4 +381,4 @@ class RetrievalOpenSearch:
                     self.results[query_id][corp_id] = hit['_score']
             self.took_time[query_id] = int(query_responses[i]['took'])
 
-        return self.results, self.took_time
+        return self.results
